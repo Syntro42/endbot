@@ -51,6 +51,11 @@ async function online(ctx: DiscordContext) {
 	}
 
 	if (existsSync(bridge.config.backup_folder_path)) {
+			if (!existsSync(bridge.config.local_folder_path)) {
+				await ctx.message.channel.send(Embed.error("Backup failed: Could not find world folder"));
+				return;
+			}
+
 			const embed = new MessageEmbed()
 			.setColor(Colors.RESULT)
 			.setTitle(`Running a backup for ${bridge.config.name}...`)
@@ -58,6 +63,7 @@ async function online(ctx: DiscordContext) {
 			const createEmbed = await ctx.message.channel.send(embed);
 			const backup_name = await backup(bridge, ctx);
 			await createEmbed.delete();
+			if (backup_name == null) return;
 
 			const finishEmbed = new MessageEmbed()
 				.setColor(Colors.RESULT)
@@ -73,7 +79,10 @@ async function online(ctx: DiscordContext) {
 async function backup(bridge: Bridge, ctx: DiscordContext) {
 	const backup_name = `${bridge.config.name}_on_${TextUtils.getCurrentDate()}_at_${TextUtils.getCurrentTime()}`
 
-	await exec(`zip -r ${bridge.config.backup_folder_path}/${backup_name} ${bridge.config.local_folder_path}/world`)
-
-	return backup_name;
+	try {
+			await exec(`zip -r ${bridge.config.backup_folder_path}/${backup_name} ${bridge.config.local_folder_path}/world`);
+			return backup_name;
+	} catch (e) {
+					await ctx.message.channel.send(Embed.error(`Failed to create a backup on ${bridge.config.name}`, e));
+	}
 }
